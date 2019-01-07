@@ -58,3 +58,6 @@ curry f x y = f (Tuple x y)
 
 uncurry :: forall a b c. ( a -> b -> c) -> Tuple a b -> c
 uncurry f (Tuple a b) = f a b
+
+compose :: forall a b c. (b -> c) -> (a -> b) -> a -> c
+compose f g x = f (g x)
