@@ -3,6 +3,7 @@ module Chapter2 where
 import Prelude
 import Data.Array
 import Data.Maybe
+import Data.Tuple
 
 abs :: Int -> Int
 abs n = if n < 0 then -n else n
@@ -51,3 +52,6 @@ isSorted as ordered = loop(0)
     loop n | n >= length as = true
            | compare ordered (index as n) (index as (n + 1)) = loop (n + 1)
            | otherwise = false
+
+curry :: forall a b c. (Tuple a b -> c) -> (a -> (b -> c))
+curry f x y = f (Tuple x y)
