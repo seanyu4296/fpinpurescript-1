@@ -55,3 +55,6 @@ isSorted as ordered = loop(0)
 
 curry :: forall a b c. (Tuple a b -> c) -> (a -> (b -> c))
 curry f x y = f (Tuple x y)
+
+uncurry :: forall a b c. ( a -> b -> c) -> Tuple a b -> c
+uncurry f (Tuple a b) = f a b
