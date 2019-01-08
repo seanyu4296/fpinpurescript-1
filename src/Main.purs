@@ -1,15 +1,21 @@
 module Main where
 
 import Chapter2
-
+import Chapter3
 import Prelude
+
 import Effect (Effect)
 import Effect.Console (log)
 
+sampleList :: List Int
+sampleList = (1 : 2 : 3 : 4 : 5 : Nil)
+
 main :: Effect Unit
 main = do
-  log (formatResult "absolute value" (-42) abs)
-  log (formatResult "factorial" 7 factorial)
-  log (show (findFirst ["a", "b", "c"] "b"))
-  log (show (polyFindFirst [1, 2, 3] (_ == 1)))
-  log (show (isSorted [1, 2, 3, 3] (\a b -> a <= b)))
+  log $ show $ sum sampleList
+  log $ show $ tail sampleList
+  log $ show sampleList
+  log $ show $ setHead 5 sampleList
+  log $ show $ drop sampleList 3
+  log $ show $ dropWhile sampleList (_ < 3)
+  log $ show $ init sampleList
