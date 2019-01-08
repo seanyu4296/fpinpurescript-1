@@ -38,15 +38,39 @@ drop (x : xs) n
   | otherwise = x : xs
 
 dropWhile :: forall a. List a -> (a -> Boolean) -> List a
-dropWhile Nil _ = Nil
-dropWhile (x : Nil) f
-  | f x = Nil
-  | otherwise = x : Nil
-dropWhile (x : xs) f
-  | f x = dropWhile xs f
-  | otherwise = x : xs
+dropWhile l f = case l of
+  h : t | f h -> dropWhile t f
+  _ -> l
 
 init :: forall a. List a -> List a
 init Nil = Nil
 init (_ : Nil) = Nil
 init (h : t) = h : init t
+
+foldRight :: forall a b. List a -> b -> (a -> b -> b) -> b
+foldRight as z f = case as of
+  Nil -> z
+  h : t -> f h (foldRight t z f)
+
+sum' :: List Int -> Int
+sum' ns = foldRight ns 0 (+)
+
+product' :: List Number -> Number
+product' ns = foldRight ns 1.0 (*)
+
+length' :: forall a. List a -> Int
+length' l = foldRight l 0 \_ y -> y + 1
+
+foldLeft :: forall a b. List a -> b -> (b -> a -> b) -> b
+foldLeft l z f = case l of
+  Nil -> z
+  h : t -> foldLeft t (f z h) f
+
+sum'' :: List Int -> Int
+sum'' l = foldLeft l 0 (+)
+
+product'' :: List Number -> Number
+product'' l = foldLeft l 1.0 (*)
+
+length'' :: forall a. List a -> Int
+length'' l = foldLeft l 0 \x y -> x + 1
