@@ -112,3 +112,63 @@ addList _ _ = Nil
 zipWith :: forall a b c. List a -> List b -> (a -> b -> c) ->  List c
 zipWith (h : t) (h' : t') f = f h h' : zipWith t t' f
 zipWith _ _ _ = Nil
+
+hasSubsequence :: forall a. Show a => List a -> List a -> Boolean
+hasSubsequence as bs = hasSubsequence' as bs bs
+  where
+    hasSubsequence' :: forall a'. Show a' => List a' -> List a' -> List a' -> Boolean
+    hasSubsequence' as' bs' cs = case as', bs' of
+      Nil, _ -> false
+      _, Nil -> true
+      (h : t), (h' : t')
+        | (show h) == (show h') -> hasSubsequence' t t' cs
+        | otherwise -> hasSubsequence' t cs cs
+
+--
+
+data Tree a = Leaf a
+            | Branch (Tree a) (Tree a)
+
+instance showTree :: Show a => Show (Tree a) where
+  show (Leaf x) = show x
+  show (Branch x y) = "(" <> show x <> " , " <> show y <> ")"
+
+treeSize :: forall a. Tree a -> Int
+treeSize (Leaf _) = 1
+treeSize (Branch x y) = 1 + treeSize x + treeSize y
+
+treeMax :: Tree Int -> Int
+treeMax t = case t of
+  Leaf x -> x
+  Branch x y
+    | treeMax x > treeMax y -> treeMax x
+    | otherwise -> treeMax y
+
+treeDepth :: forall a. Tree a -> Int
+treeDepth t = case t of
+  Leaf _ -> 0
+  Branch x y
+    | treeDepth x > treeDepth y -> 1 + treeDepth x
+    | otherwise -> 1 + treeDepth y
+
+treeMap :: forall a b. Tree a -> (a -> b) -> Tree b
+treeMap t f = case t of
+  Leaf x -> Leaf (f x)
+  Branch x y -> Branch (treeMap x f) (treeMap y f)
+
+fold :: forall a b. Tree a -> (a -> b) -> (b -> b -> b) -> b
+fold t f g = case t of
+  Leaf x -> f x
+  Branch x y -> g (fold x f g) (fold y f g)
+
+treeSize' :: forall a. Tree a -> Int
+treeSize' t = fold t (\x -> 1) (\x y -> x + y + 1)
+
+treeMax' :: Tree Int -> Int
+treeMax' t = fold t (\x -> x) (\x y -> if x > y then x else y)
+
+treeDepth' :: forall a. Tree a -> Int
+treeDepth' t = fold t (\x -> 0) (\x y -> if x > y then x + 1 else y + 1)
+
+treeMap' :: forall a b. Tree a -> (a -> b) -> Tree b
+treeMap' t f = fold t (\x -> Leaf (f x)) (\x y -> Branch x y)
