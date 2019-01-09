@@ -48,9 +48,9 @@ init (_ : Nil) = Nil
 init (h : t) = h : init t
 
 foldRight :: forall a b. List a -> b -> (a -> b -> b) -> b
-foldRight as z f = case as of
-  Nil -> z
-  h : t -> f h (foldRight t z f)
+foldRight l acc f = case l of
+  Nil -> acc
+  h : t -> f h (foldRight t acc f)
 
 sum' :: List Int -> Int
 sum' ns = foldRight ns 0 (+)
@@ -74,3 +74,41 @@ product'' l = foldLeft l 1.0 (*)
 
 length'' :: forall a. List a -> Int
 length'' l = foldLeft l 0 \x y -> x + 1
+
+reverse :: forall a. List a -> List a
+reverse l = foldLeft l Nil \acc x -> x : acc
+
+append' :: forall a. List a -> List a -> List a
+append' as bs = foldLeft (reverse as) bs \acc x -> x : acc
+
+append'' :: forall a. List a -> List a -> List a
+append'' as bs = foldRight as bs \x acc -> x : acc
+
+concat :: forall a. List (List a) -> List a
+concat l = foldLeft l Nil append'
+
+addOneList :: List Int -> List Int
+addOneList l = foldRight l Nil \x acc -> (x + 1) : acc
+
+listToString :: List Number -> List String
+listToString l = foldRight l Nil \x acc -> show x : acc
+
+map' :: forall a b. List a -> (a -> b) -> List b
+map' l f = foldLeft (reverse l) Nil \acc x -> f x : acc
+
+filter :: forall a. List a -> (a -> Boolean) -> List a
+filter l f = foldLeft (reverse l) Nil \acc x -> if f x then x : acc else acc
+
+flatMap :: forall a b. List a -> (a -> List b) -> List b
+flatMap l f = foldLeft (reverse l) Nil \acc x -> append' (f x) acc
+
+filter' :: forall a. List a -> (a -> Boolean) -> List a
+filter' l f = flatMap l \x -> if f x then (x : Nil) else Nil
+
+addList :: List Int -> List Int -> List Int
+addList (h : t) (h' : t') = (h + h') : addList t t'
+addList _ _ = Nil
+
+zipWith :: forall a b c. List a -> List b -> (a -> b -> c) ->  List c
+zipWith (h : t) (h' : t') f = f h h' : zipWith t t' f
+zipWith _ _ _ = Nil
