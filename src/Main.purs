@@ -1,58 +1,44 @@
 module Main where
 
-import Chapter2
-import Chapter3
+import Chapter5
+import Data.Lazy
 import Prelude
 
+import Chapter4 (List(Nil), (:))
+import Debug.Trace (spy, trace)
 import Effect (Effect)
 import Effect.Console (log, logShow)
 
-sampleList :: List Int
-sampleList = (1 : 3 : 3 : 4 : 3 : 2 : 5 : Nil)
-
-sampleList' :: List Int
-sampleList' = (6 : 7 : 8 : 9 : 10 : Nil)
-
-sampleListNum :: List Number
-sampleListNum = (1.0 : 2.0 : 3.0 : Nil)
-
-sampleTree :: Tree Int
-sampleTree = Branch (Branch (Leaf 1) (Leaf 2)) (Branch (Leaf 3) (Branch (Leaf 4) (Leaf 5)))
-
 main :: Effect Unit
 main = do
-  logShow $ sum sampleList
-  logShow $ tail sampleList
-  logShow sampleList
-  logShow $ setHead 5 sampleList
-  logShow $ drop sampleList 3
-  logShow $ dropWhile sampleList (_ < 3)
-  logShow $ init sampleList
-  logShow $ sum' sampleList
-  logShow $ product' sampleListNum
-  logShow $ length' sampleList
-  logShow $ sum'' sampleList
-  logShow $ product'' sampleListNum
-  logShow $ length'' sampleList
-  logShow $ reverse sampleList
-  logShow $ append' sampleList (6 : 7 : 8 : Nil)
-  logShow $ append'' sampleList (6 : 7 : 8 : Nil)
-  logShow $ concat (sampleList : sampleList' : Nil)
-  logShow $ addOneList sampleList
-  logShow $ listToString sampleListNum
-  logShow $ map' sampleList \x -> x + 1
-  logShow $ filter sampleList \x -> (mod x 2) == 0
-  logShow $ flatMap sampleList \x -> (x : x : Nil)
-  logShow $ filter' sampleList \x -> (mod x 2) == 0
-  logShow $ addList sampleList sampleList'
-  logShow $ zipWith sampleList sampleList' (*)
-  logShow $ hasSubsequence sampleList (1 : 2 : Nil)
-  logShow $ sampleTree
-  logShow $ treeSize sampleTree
-  logShow $ treeMax sampleTree
-  logShow $ treeDepth sampleTree
-  logShow $ treeMap sampleTree \x -> x + 1
-  logShow $ treeSize' sampleTree
-  logShow $ treeMax' sampleTree
-  logShow $ treeDepth' sampleTree
-  logShow $ treeMap' sampleTree \x -> x + 1
+  logShow $ toList $ fromList (1 : 2 : 3 : 4 : 5 : Nil)
+  logShow $ toList $ take (fromList (1 : 2 : 3 : 4 : 5 : Nil)) 3
+  logShow $ toList $ drop (fromList (1 : 2 : 3 : 4 : 5 : Nil)) 3
+  logShow $ toList $ takeWhile (fromList (1 : 2 : 3 : 4 : 5 : Nil)) (_ < 3)
+  logShow $ toList $ takeWhile' (fromList (1 : 2 : 3 : 4 : 5 : Nil)) (_ < 4)
+  logShow $ forAll (fromList (1 : 2 : 3 : 4 : 5 : Nil)) (_ < 7)
+  logShow $ toList $ take ones 10
+  logShow $ exists ones (_ == 1)
+  logShow $ toList $ takeWhile' iStream (_ < 5)
+  log "done"
+  logShow $ headOption' iStream
+  logShow $ toList $ take (mapStream ones (_ + 1)) 10
+  logShow $ toList $ take (filterStream (drop iStream 5) (\x -> x `mod` 2 == 0)) 10
+  logShow $ toList $ take (appendStream iStream iStream) 10
+  -- logShow $ toList $ take (flatMapStream' (drop iStream 5) (\x -> fromList (x : x : Nil))) 10
+
+  -- logShow $ toList' (defer (\y -> SEmpty ))
+--  logShow $ toList' (Lazy (SCons "a" (Lazy (SCons "b" (Lazy (SCons "c" (Lazy SEmpty)))))))
+  -- logShow $ toList $ take (SCons (\_ -> 1) (\_ -> SCons (\_ -> 2) (\_ -> SEmpty))) 2
+
+  where
+    two :: Unit -> Int
+    two _ = spy "two" 2
+
+    three :: Unit -> Int
+    three _ = spy "three" 3
+
+    ss :: Stream Int
+    ss = fromList' $ two : three : Nil
+
+    xx = toList $ take ss 2

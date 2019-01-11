@@ -113,17 +113,16 @@ zipWith :: forall a b c. List a -> List b -> (a -> b -> c) ->  List c
 zipWith (h : t) (h' : t') f = f h h' : zipWith t t' f
 zipWith _ _ _ = Nil
 
-hasSubsequence :: forall a. Show a => List a -> List a -> Boolean
+hasSubsequence :: forall a. Eq a => List a -> List a -> Boolean
 hasSubsequence as bs = hasSubsequence' as bs bs
   where
-    hasSubsequence' :: forall a'. Show a' => List a' -> List a' -> List a' -> Boolean
+    hasSubsequence' :: List a -> List a -> List a -> Boolean
     hasSubsequence' as' bs' cs = case as', bs' of
       Nil, _ -> false
       _, Nil -> true
       (h : t), (h' : t')
-        | (show h) == (show h') -> hasSubsequence' t t' cs
+        | h == h' -> hasSubsequence' t t' cs
         | otherwise -> hasSubsequence' t cs cs
-
 --
 
 data Tree a = Leaf a

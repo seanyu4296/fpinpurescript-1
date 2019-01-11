@@ -11,7 +11,10 @@
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.0",
     "purescript-assert": "^4.0.0",
-    "purescript-arrays": "^5.2.0"
+    "purescript-arrays": "^5.2.0",
+    "purescript-integers": "^4.0.0",
+    "purescript-lazy": "^4.0.0",
+    "purescript-debug": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
