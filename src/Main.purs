@@ -49,3 +49,7 @@ main = do
     -- ss = fromList' $ two : three : Nil
 
     -- xx = toList $ take ss 2
+
+
+add2 :: Int -> Int
+add2 x = x + 2

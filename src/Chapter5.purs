@@ -111,6 +111,10 @@ fibs =  loop 0 1
   where 
     loop :: Int -> Int -> Stream Int
     loop m n = Stream $ defer (\_ -> Cons m (loop n (m +n)))
+{- 
+fibs :: Stream Int
+fibs = (fromList $ 0 : 1 : Nil) `append` tl
+  where tl = zipWith fibs tl (+) -}
 
 unfold :: forall a s. s -> (s -> Option (Tuple a s)) -> Stream a
 unfold s f = Stream $ (defer (\_ -> case f s of
