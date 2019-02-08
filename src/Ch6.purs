@@ -3,11 +3,12 @@ module Ch6 where
 import Prelude
 
 import BigIntUtil (bigIntBitsToInt)
-import Data.BigInt (BigInt)
+import Data.BigInt (BigInt, and)
 import Data.BigInt as BigInt
 import Data.Int as Int
 import Data.List (List(..))
 import Data.Maybe (fromJust)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3, tuple3)
 import Partial.Unsafe (unsafePartial)
@@ -47,7 +48,7 @@ unsafeFromHex s = unsafePartial $ fromJust $ BigInt.fromBase 16 s
 
 --
 
-int :: RNG -> Tuple Int RNG
+int :: Rand Int
 int = nextInt
 
 randomPair :: RNG -> Tuple (Tuple Int Int) RNG
@@ -106,11 +107,22 @@ type Rand a = RNG -> Tuple a RNG
 unit :: forall a. a -> Rand a
 unit = Tuple
 
-mapRand :: forall a b. Rand a -> (a -> b) -> Rand b
+mapRand :: forall a b. (RNG -> Tuple a RNG) -> (a -> b) -> RNG -> Tuple b RNG
 mapRand rf f rng =
   let
     Tuple a rng2 = rf rng
   in Tuple (f a) rng2
+
+
+{- mapRand' :: forall a b. (Rand a) -> (a -> b) -> (Rand b)
+mapRand' raf f rng=
+  let
+    Tuple a rng2 = raf rng
+  in Tuple f a rbng2 -}
+
+number'':: RNG -> Tuple Number RNG
+number'' = mapRand nonNegativeInt (\x -> Int.toNumber x / Int.toNumber top)
+
 
 number' :: RNG -> Tuple Number RNG
 number' rng = mapRand int (\x -> Int.toNumber x / Int.toNumber top) rng
@@ -122,6 +134,16 @@ map2 raf rbf f rng =
     Tuple b rng3 = rbf rng2
   in Tuple (f a b) rng3
 
+{- map2' :: forall a b c. Rand a -> Rand b -> (a -> b -> c ) -> Rand c
+map2' raf rbf f rng =
+  let 
+    Tuple a rng2 = raf rng
+    Tuple b rng3 = rbf rng2
+  in Tuple (f a b) rng3 -}
+
+both' :: forall a b. Rand a -> Rand b -> Rand (Tuple a b)
+both' raf rbf = map2 raf rbf (\x y -> Tuple x y)
+
 both :: forall a b. Rand a -> Rand b -> Rand (Tuple a b)
 both raf rbf = map2 raf rbf (\x y -> Tuple x y)
 
@@ -131,7 +153,119 @@ intNumber' = both int number
 numberInt' :: Rand (Tuple Number Int)
 numberInt' = both number int
 
+
+sequence :: forall a. List (Rand a ) -> Rand (List a)
+sequence l rng = case l of
+  Nil -> Tuple Nil rng
+  Cons rhf t -> (map2 rhf (sequence t) Cons) rng
+
+flatMap :: forall a b. Rand a -> (a -> Rand b) -> Rand b
+flatMap raf f rng = 
+  let 
+    Tuple a rng2 = raf rng
+  in (f a) rng2
+
+{- 
 sequence :: forall a. List (Rand a) -> Rand (List a)
 sequence l = case l of
   Nil -> Tuple Nil
-  Cons randh t -> map2 randh (sequence t) Cons
+  Cons randh t -> map2 randh (sequence t) Cons -}
+
+map'':: forall a b. Rand a -> (a -> b) -> Rand b
+map'' raf f = flatMap raf \x -> unit (f x)
+
+map2'':: forall a b c. Rand a -> Rand b -> (a -> b -> c ) -> Rand c
+map2'' raf rbf f = 
+  flatMap raf (\a -> 
+    flatMap rbf (\b -> 
+      unit $ f a b
+    )
+  )
+
+
+newtype State s a = State (s -> Tuple a s)
+
+
+derive instance newTypeState :: Newtype (State s a) _
+
+runState :: forall s a. State s a -> s -> Tuple a s
+runState (State f) = f
+
+type Rand' a = State BigInt a
+
+nextInt' :: Rand' Int
+nextInt' = State $ \s -> 
+  let
+    newSeed :: BigInt
+    newSeed = BigInt.and (s * lcgA + lcgC) lcgM'
+    n :: Int
+    n = bigIntBitsToInt $ BigInt.shr newSeed 16.0
+    -- n = bigIntBitsToInt $ BigInt.shr newSeed 16.0
+  in Tuple n newSeed
+
+int' :: Rand' Int
+int' = nextInt'
+{- int :: Rand' Int
+int = nextInt -}
+
+unitState :: forall s a. a -> State s a
+unitState a = State \s -> Tuple a s
+
+mapS :: forall a b s. (State s a) -> (a -> b) -> (State s b)
+mapS sa f = State $ \s -> 
+  let
+    Tuple a s2 = unwrap sa $ s
+  in Tuple (f a) s2
+
+mapS2 :: forall a b c s. (State s a) -> State s b -> (a -> b -> c) -> State s c
+mapS2 sa sb f = State $ \s ->
+  let
+    Tuple a s2 = unwrap sa $ s
+    Tuple b s3 = unwrap sb $ s2
+  in Tuple (f a b) s3
+
+flatMapS:: forall a b s. (State s a) -> (a -> State s b) -> State s b
+flatMapS (State saf) f = State $ \s ->
+  let
+    Tuple a s2 = saf s
+  in unwrap (f a) $ s2
+
+
+mapS' :: forall a b s. (State s a) -> (a -> b) -> (State s b)
+mapS' sa f = flatMapS sa \a -> unitState $ f a
+
+mapS2' :: forall a b c s. State s a -> State s b -> (a -> b -> c ) -> State s c
+mapS2' sa sb f = 
+  flatMapS sa (\a -> 
+    flatMapS sb (\b ->
+      unitState $ f a b
+    )
+  )
+    
+sequenceS :: forall a s. List (State s a) -> State s (List a)
+sequenceS Nil = unitState $ Nil
+sequenceS (Cons sh t) = mapS2' sh (sequenceS t) Cons
+
+instance functorState :: Functor (State s) where
+  map f sa = State $ \s -> 
+    let
+      Tuple a s2 = unwrap sa $ s
+    in Tuple (f a) s2
+
+{- instance applyState :: Apply (State s) where
+  apply sb f sa = State $ \s ->
+    let
+      Tuple a s2 = unwrap sa $ s
+      Tuple b s3 = unwrap sb $ s2
+    in Tuple (f a b) s3
+ -}
+{- instance applicativeState :: Applicative (State s) where
+  pure a = State \s -> Tuple a s -}
+
+ns :: Rand' (List Int)
+ns = flatMapS int' (\x ->
+  flatMapS int' (\y -> 
+    unitState $ Cons x (Cons y Nil)
+  )
+)
+  
