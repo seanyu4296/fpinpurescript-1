@@ -104,8 +104,8 @@ ints i rng | i <= 0 = Tuple Nil rng
 
 type Rand a = RNG -> Tuple a RNG
 
-unit :: forall a. a -> Rand a
-unit = Tuple
+unitR :: forall a. a -> Rand a
+unitR = Tuple
 
 mapRand :: forall a b. (RNG -> Tuple a RNG) -> (a -> b) -> RNG -> Tuple b RNG
 mapRand rf f rng =
@@ -172,19 +172,18 @@ sequence l = case l of
   Cons randh t -> map2 randh (sequence t) Cons -}
 
 map'':: forall a b. Rand a -> (a -> b) -> Rand b
-map'' raf f = flatMap raf \x -> unit (f x)
+map'' raf f = flatMap raf \x -> unitR (f x)
 
 map2'':: forall a b c. Rand a -> Rand b -> (a -> b -> c ) -> Rand c
 map2'' raf rbf f = 
   flatMap raf (\a -> 
     flatMap rbf (\b -> 
-      unit $ f a b
+      unitR $ f a b
     )
   )
 
 
 newtype State s a = State (s -> Tuple a s)
-
 
 derive instance newTypeState :: Newtype (State s a) _
 
@@ -200,7 +199,6 @@ nextInt' = State $ \s ->
     newSeed = BigInt.and (s * lcgA + lcgC) lcgM'
     n :: Int
     n = bigIntBitsToInt $ BigInt.shr newSeed 16.0
-    -- n = bigIntBitsToInt $ BigInt.shr newSeed 16.0
   in Tuple n newSeed
 
 int' :: Rand' Int
@@ -217,12 +215,39 @@ mapS sa f = State $ \s ->
     Tuple a s2 = unwrap sa $ s
   in Tuple (f a) s2
 
-mapS2 :: forall a b c s. (State s a) -> State s b -> (a -> b -> c) -> State s c
+mapS2 :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
 mapS2 sa sb f = State $ \s ->
   let
     Tuple a s2 = unwrap sa $ s
     Tuple b s3 = unwrap sb $ s2
   in Tuple (f a b) s3
+
+applyS :: forall s a b. State s a -> State s (a -> b) -> State s b
+applyS sa sbf = mapS2 sa sbf (\a bf -> bf a )
+
+applyS' :: forall s a b. State s a -> State s (a -> b) -> State s b
+applyS' sa sbf = State $ \s -> 
+  let 
+    Tuple a s2 = unwrap  sa $ s
+    Tuple bf s3 = unwrap  sbf $ s2
+  in Tuple (bf a) s2
+
+{- f but partially applied by something -}
+{- mapS2'' :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
+mapS2'' sa sb f = applyS' sa (State $ \s -> 
+  let
+    Tuple a s2 = unwrap sa $ s
+  in Tuple (f a) s2
+) -}
+
+mapS2'' :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
+mapS2'' sa sb f = 
+  applyS' sa ( State $ \s ->
+    applyS' sb ( State $ \s2 -> 
+      f s s2 
+    ) 
+  )
+
 
 flatMapS:: forall a b s. (State s a) -> (a -> State s b) -> State s b
 flatMapS (State saf) f = State $ \s ->
@@ -241,7 +266,7 @@ mapS2' sa sb f =
       unitState $ f a b
     )
   )
-    
+
 sequenceS :: forall a s. List (State s a) -> State s (List a)
 sequenceS Nil = unitState $ Nil
 sequenceS (Cons sh t) = mapS2' sh (sequenceS t) Cons
@@ -252,14 +277,10 @@ instance functorState :: Functor (State s) where
       Tuple a s2 = unwrap sa $ s
     in Tuple (f a) s2
 
-{- instance applyState :: Apply (State s) where
+instance applyState :: Apply (State s) where
   apply sb f sa = State $ \s ->
-    let
-      Tuple a s2 = unwrap sa $ s
-      Tuple b s3 = unwrap sb $ s2
-    in Tuple (f a b) s3
- -}
-{- instance applicativeState :: Applicative (State s) where
+
+instance applicativeState :: Applicative (State s) where
   pure a = State \s -> Tuple a s -}
 
 ns :: Rand' (List Int)
@@ -268,4 +289,26 @@ ns = flatMapS int' (\x ->
     unitState $ Cons x (Cons y Nil)
   )
 )
-  
+
+
+get :: forall s. State s s
+get = State \s -> Tuple s s
+
+set :: forall s. s -> State s Unit
+set s = State \_ -> Tuple unit s
+
+
+
+data Input = Coin | Turn
+type Machine = {
+  locked :: Boolean,
+  candies :: Int,
+  coins :: Int
+}
+
+type MachineState a = State Machine a
+
+y :: Rand' Int
+y = map (\x -> x + 1) int' 
+
+-- runInput :: Input -> MachineState Unit
