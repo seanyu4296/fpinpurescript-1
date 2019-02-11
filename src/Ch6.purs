@@ -12,6 +12,7 @@ import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3, tuple3)
 import Partial.Unsafe (unsafePartial)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- make sure to run `npm i` to install big-integer js dependency
 
@@ -241,13 +242,7 @@ mapS2'' sa sb f = applyS' sa (State $ \s ->
 ) -}
 
 mapS2'' :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
-mapS2'' sa sb f =
-  applyS' sa ( State $ \s ->
-    applyS' sb ( State $ \s2 ->
-      f s s2
-    )
-  )
-
+mapS2'' sa sb f = applyS' sb $ applyS' sa (unitState f) 
 
 flatMapS:: forall a b s. (State s a) -> (a -> State s b) -> State s b
 flatMapS (State saf) f = State $ \s ->
@@ -278,18 +273,28 @@ instance functorState :: Functor (State s) where
     in Tuple (f a) s2
 
 instance applyState :: Apply (State s) where
-  apply sb f sa = State $ \s ->
+  apply fa2b fa = State $ \s ->
+    let
+      Tuple a s2 = unwrap fa $ s
+      Tuple bf s3 = unwrap fa2b $ s2
+    in Tuple (bf a) s2
 
 instance applicativeState :: Applicative (State s) where
-  pure a = State \s -> Tuple a s -}
+  pure a = State \s -> Tuple a s
 
-ns :: Rand' (List Int)
-ns = flatMapS int' (\x ->
-  flatMapS int' (\y ->
-    unitState $ Cons x (Cons y Nil)
-  )
-)
+instance bindState :: Bind (State s) where 
+  bind (State saf) f = State $ \s ->
+    let
+      Tuple a s2 = saf s
+    in unwrap (f a) $ s2
 
+instance monadState :: Monad (State s)
+
+ns' :: Rand' (List Int)
+ns' = do
+  n <- int'
+  n2 <- int'
+  pure $ Cons n (Cons n2 Nil)
 
 get :: forall s. State s s
 get = State \s -> Tuple s s
@@ -371,3 +376,21 @@ simulateMachine' inputs =
   )
 
 -}
+
+myApply :: forall f a b. f a -> f(a ->b) -> f b
+myApply = unsafeCoerce unit
+
+myPure :: forall f a . a -> f a
+myPure = unsafeCoerce unit
+
+myMap :: forall f a b. (a -> b) -> f a -> f b
+myMap = unsafeCoerce unit
+
+myMap2 :: forall f a b c. f a -> f b -> (a -> b -> c) -> f c
+myMap2 fa fb g = myApply fb (myApply fa (myPure g))
+
+
+-- f (a -> (b -> c))
+-- f (b -> c)
+
+-- myApply fb f (b -> c)
