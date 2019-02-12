@@ -12,6 +12,7 @@ import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3, tuple3)
 import Partial.Unsafe (unsafePartial)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- make sure to run `npm i` to install big-integer js dependency
 
@@ -240,13 +241,13 @@ mapS2'' sa sb f = applyS' sa (State $ \s ->
   in Tuple (f a) s2
 ) -}
 
-mapS2'' :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
-mapS2'' sa sb f =
-  applyS' sa ( State $ \s ->
-    applyS' sb ( State $ \s2 ->
-      f s s2
-    )
-  )
+-- mapS2'' :: forall a b c s. State s a -> State s b -> (a -> b -> c) -> State s c
+-- mapS2'' sa sb f =
+--   applyS' sa ( State $ \s ->
+--     applyS' sb ( State $ \s2 ->
+--       f s s2
+--     )
+--   )
 
 
 flatMapS:: forall a b s. (State s a) -> (a -> State s b) -> State s b
@@ -271,24 +272,24 @@ sequenceS :: forall a s. List (State s a) -> State s (List a)
 sequenceS Nil = unitState $ Nil
 sequenceS (Cons sh t) = mapS2' sh (sequenceS t) Cons
 
-instance functorState :: Functor (State s) where
-  map f sa = State $ \s ->
-    let
-      Tuple a s2 = unwrap sa $ s
-    in Tuple (f a) s2
+-- instance functorState :: Functor (State s) where
+--   map f sa = State $ \s ->
+--     let
+--       Tuple a s2 = unwrap sa $ s
+--     in Tuple (f a) s2
 
-instance applyState :: Apply (State s) where
-  apply sb f sa = State $ \s ->
+-- instance applyState :: Apply (State s) where
+--   apply sb f sa = State $ \s ->
 
-instance applicativeState :: Applicative (State s) where
-  pure a = State \s -> Tuple a s -}
+-- instance applicativeState :: Applicative (State s) where
+--   pure a = State \s -> Tuple a s -}
 
-ns :: Rand' (List Int)
-ns = flatMapS int' (\x ->
-  flatMapS int' (\y ->
-    unitState $ Cons x (Cons y Nil)
-  )
-)
+-- ns :: Rand' (List Int)
+-- ns = flatMapS int' (\x ->
+--   flatMapS int' (\y ->
+--     unitState $ Cons x (Cons y Nil)
+--   )
+-- )
 
 
 get :: forall s. State s s
@@ -371,3 +372,15 @@ simulateMachine' inputs =
   )
 
 -}
+
+
+
+
+myApply :: forall f a b. f a -> f(a ->b) -> f b
+myApply = unsafeCoerce unit
+
+myPure :: forall f a . a -> f a
+myPure = unsafeCoerce unit
+
+myMap2 :: forall f a b c. f a -> f b -> (a -> b -> c) -> f c
+myMap2 fa fb g = myApply fb (myApply fa (myPure g))
