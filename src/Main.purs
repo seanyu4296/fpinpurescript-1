@@ -5,16 +5,17 @@ import Data.Lazy
 import Data.Tuple
 import Prelude
 
-import Async (runAsync, x)
+import Async (copyFileCont)
 import Chapter4 (List(Nil), (:), Option(..))
+import Control.Monad.Cont (runContT)
 import Debug.Trace (spy, trace)
 import Effect (Effect)
 import Effect.Console (log, logShow)
 
 main :: Effect Unit
 main = do
+  -- runContT (copyFileCont "/tmp/text.txt" "/tmp/copy.txt" ) logShow
   logShow $ toList $ take (constant' 10) 5
-  runAsync x
   -- logShow $ toList $ take (from 10) 5
   -- logShow $ toList $ take iStream 5
   -- logShow $ toList $ take squareds 30

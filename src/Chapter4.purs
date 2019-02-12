@@ -120,3 +120,4 @@ eitherSequence l = foldRight l (Right Nil) (\x acc -> eitherMap2 acc x (\acc' x'
 
 eitherTraverse :: forall e a b. List a -> (a -> Either e b) -> Either e (List b)
 eitherTraverse l f = foldRight l (Right Nil) (\x acc -> eitherMap2 acc (f x) (\acc' x' -> x' : acc'))
+

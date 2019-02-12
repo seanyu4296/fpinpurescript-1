@@ -8,7 +8,7 @@ import Data.BigInt as BigInt
 import Data.Int as Int
 import Data.List (List(..))
 import Data.Maybe (fromJust)
-import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3, tuple3)
 import Partial.Unsafe (unsafePartial)
