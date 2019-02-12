@@ -5,6 +5,7 @@ import Prelude
 import Chapter4 (List(Nil), (:), Option(..))
 import Data.Lazy (Lazy, defer, force)
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Tuple
 
 newtype Stream a = Stream (Lazy (Step a))
 data Step a = Empty | Cons a (Stream a)
@@ -86,6 +87,56 @@ iStream = loop 1
   where
     loop :: Int -> Stream Int
     loop n = Stream $ defer \_ -> n ~ (loop (n + 1))
+
+from :: Int -> Stream Int
+from n = loop n
+  where 
+    loop :: Int -> Stream Int
+    loop m = Stream $ defer \_ -> m ~ (loop (m + 1) )    
+
+constant :: forall a. a -> Stream a
+constant x = loop x
+  where
+    loop :: a -> Stream a
+    loop n = Stream $ defer \_ -> n ~ (loop (n))
+
+squareds :: Stream Int
+squareds = Stream $ (defer (\_ -> Cons 0 (loop 1)))
+  where
+    loop :: Int -> Stream Int
+    loop n = Stream $ defer (\_ -> Cons n (loop (n + n)))
+
+fibs :: Stream Int
+fibs =  loop 0 1
+  where 
+    loop :: Int -> Int -> Stream Int
+    loop m n = Stream $ defer (\_ -> Cons m (loop n (m +n)))
+{- 
+fibs :: Stream Int
+fibs = (fromList $ 0 : 1 : Nil) `append` tl
+  where tl = zipWith fibs tl (+) -}
+
+unfold :: forall a s. s -> (s -> Option (Tuple a s)) -> Stream a
+unfold s f = Stream $ (defer (\_ -> case f s of
+  Some (Tuple a ns) -> Cons a (unfold ns f)
+  _ -> Empty
+))
+
+constant' :: forall a. a -> Stream a
+constant' x = unfold x (\s -> Some(Tuple s s))
+
+from' :: Int -> Stream Int
+from' n = unfold n (\s -> Some(Tuple s (s + 1)))
+
+
+fibs' :: Stream Int
+fibs' = unfold (Tuple 0 1) (\s -> Some (Tuple (fst s) (Tuple (snd s) ((fst s) + (snd s)))))
+
+{- fibs' :: Stream Int
+fibs' = loop 0 1
+  where 
+    loop :: Int -> Int -> Stream Int
+    loop m n = unfold m (\s -> Some(Tuple (s +) (s + n))) -}
 
 headOption :: forall a. Stream a -> Option a
 headOption (Stream a) = case force a of
